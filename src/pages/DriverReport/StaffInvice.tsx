@@ -113,7 +113,7 @@ const StaffInvice = () => {
                     <div className="text-2xl font-bold uppercase text-gray-800">Invoice</div>
                     <div className="shrink-0">
                         <img
-                            src="/assets/images/auth/rsa-png.png"
+                            src="/assets/images/auth/s&S.png.png"
                             alt="Logo"
                             className="w-24 ml-auto"
                         />

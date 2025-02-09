@@ -46,7 +46,6 @@ interface BookingDetails {
     formAdded: boolean;
     bookingChecked: boolean;
     paymentStatus: string;
-    feedback?: boolean;
 
     companyName?: string;
     vehicleModel: string;
@@ -102,7 +101,6 @@ const ViewMore: React.FC = () => {
     const queryParams = new URLSearchParams(search);
     const userName = sessionStorage.getItem('username');
     const [showForm, setShowForm] = useState(false);
-    const [feedback, setFeedback] = useState(false);
 
     const [formData, setFormData] = useState<FormData>({
         pickedTime: null,
@@ -147,7 +145,6 @@ const ViewMore: React.FC = () => {
         pickedTime: bookingDetails?.pickedTime,
         droppedTime: bookingDetails?.droppedTime,
         remark: bookingDetails?.remark,
-        feedback: bookingDetails?.feedback,
     });
 
     const [editStates, setEditStates] = useState({
@@ -209,7 +206,40 @@ const ViewMore: React.FC = () => {
         remark: false,
         companyName: false,
     });
-
+    useEffect(() => {
+        if (bookingDetails) {
+            setEditedFields({
+                
+                salary: bookingDetails?.updatedTotalSalary || '',
+                fileNumber: bookingDetails?.fileNumber || '',
+                totalDriverSalary: bookingDetails?.totalDriverSalary || '',
+                serviceVehicle: bookingDetails?.serviceVehicle || '',
+                bookingId: bookingDetails?.bookingId,
+                company: bookingDetails?.company,
+                companyName: bookingDetails?.companyName,
+                trappedLocation: bookingDetails?.trappedLocation,
+                showroomLocation: bookingDetails?.showroomLocation,
+                customerName: bookingDetails?.customerName,
+                driver: bookingDetails?.driver,
+                selectedCompany: bookingDetails?.selectedCompany,
+                totalDriverDistance: bookingDetails?.totalDriverDistance,
+                vehicleNumber: bookingDetails?.vehicleNumber,
+                vehicleModel: bookingDetails?.vehicleModel,
+                baseLocation: bookingDetails?.baseLocation,
+                pickupLocation: bookingDetails?.pickupLocation,
+                dropoffLocation: bookingDetails?.dropoffLocation,
+                distance: bookingDetails?.distance,
+                serviceType: bookingDetails?.serviceType,
+                rcBookImageURLs: bookingDetails?.rcBookImageURLs || [],
+                vehicleImageURLs: bookingDetails?.vehicleImageURLs || [],
+                fuelBillImageURLs: bookingDetails?.fuelBillImageURLs || [],
+                comments: bookingDetails?.comments,
+                pickedTime: bookingDetails?.pickedTime,
+                droppedTime: bookingDetails?.droppedTime,
+                remark: bookingDetails?.remark,
+            });
+        }
+    }, [bookingDetails]);
     const handleImageClick = (url: string) => {
         setSelectedImage(url); // Set selected image for modal
     };
@@ -238,8 +268,7 @@ const ViewMore: React.FC = () => {
             }));
         }
     };
-
-    // ------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------
     useEffect(() => {
         fetchBookingDetails();
         fetchDrivers();
@@ -314,7 +343,6 @@ const ViewMore: React.FC = () => {
                     formAdded: data.formAdded || '',
                     bookingChecked: data.bookingChecked || false,
                     paymentStatus: data.paymentStatus || '',
-                    feedback: data.feedback || false,
                 });
             }
         } catch (error) {
@@ -364,12 +392,6 @@ const ViewMore: React.FC = () => {
         }));
     };
 
-    const timestampToDate = (timestamp: Timestamp | null | undefined): Date | null => {
-        if (timestamp) {
-            return timestamp.toDate(); // Converts Timestamp to Date if it's not null
-        }
-        return null;
-    };
 
     // Updated useEffect
     useEffect(() => {
@@ -461,31 +483,7 @@ const ViewMore: React.FC = () => {
             }
         }
     };
-    const downloadImage = async (filePath: any, filename: any) => {
-        const storage = getStorage();
-        const fileRef = ref(storage, filePath);
-
-        try {
-            const url = await getDownloadURL(fileRef); // Get the public URL for the image
-
-            // Fetch the image file
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`Failed to fetch image: ${response.statusText}`);
-            }
-            const blob = await response.blob();
-
-            // Create a link and trigger the download
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `${filename}.jpg`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        } catch (error) {
-            console.error('Error downloading image:', error);
-        }
-    };
+   
 
     const formatTimestamp = (timestamp: Timestamp | null | undefined): string => {
         if (!timestamp) return 'N/A';
@@ -510,29 +508,25 @@ const ViewMore: React.FC = () => {
         // Replace the "at" position manually since Intl.DateTimeFormat can't add it
         return formattedDate.replace(', ', ' at ');
     };
-    const handleReplaceImage = async (
-        event: React.ChangeEvent<HTMLInputElement>,
-        index: number,
-        type: 'vehicleImageURLs' | 'vehicleImgURLs'
-    ) => {
+    const handleReplaceImage = async (event: React.ChangeEvent<HTMLInputElement>, index: number, type: 'vehicleImageURLs' | 'vehicleImgURLs') => {
         if (event.target.files && event.target.files[0] && bookingDetails && uid && id) {
             const file = event.target.files[0];
             const fileExtension = file.name.split('.').pop(); // Get file extension
             const storageRef = ref(storage, `images/${file.name}-${Date.now()}.${fileExtension}`);
-    
+
             try {
                 // Upload the file to Firebase Storage
                 await uploadBytes(storageRef, file);
                 const downloadURL = await getDownloadURL(storageRef);
-    
+
                 // Update the image URL in the state
                 const updatedURLs = [...bookingDetails[type]];
                 updatedURLs[index] = downloadURL;
-    
+
                 // Update the Firestore document
                 const docRef = doc(db, `user/${uid}/bookings`, id);
                 await updateDoc(docRef, { [type]: updatedURLs });
-    
+
                 // Update the local state to reflect changes
                 setBookingDetails((prevDetails) => {
                     if (!prevDetails) return null; // Handle null case
@@ -541,43 +535,15 @@ const ViewMore: React.FC = () => {
                         [type]: updatedURLs,
                     };
                 });
-    
+
                 console.log(`${type} updated successfully at index ${index}`);
             } catch (error) {
                 console.error(`Error updating ${type}:`, error);
             }
         }
     };
-    
 
-    // const renderImages = ({ images, type }: RenderImagesProps) => {
-    //     return images.length > 0 ? (
-    //         images.map((url: string, index: number) => (
-    //             <div key={index} className="max-w-xs">
-    //                 <a onClick={() => downloadImage(url, `Vehicle_Image_${type}_${index}`)} className="block mb-2 text-blue-500 cursor-pointer">
-    //                     Download
-    //                 </a>
-    //                 <img
-    //                     src={url}
-    //                     alt={`${type} Image ${index}`}
-    //                     className="w-full h-auto cursor-pointer"
-    //                     onClick={() => handleImageClick(url)} // Open image in modal
-    //                 />
-    //                 <input type="file" accept="image/*" className="mt-2" onChange={(e) => handleReplaceImage(e, index, type)} />
-    //             </div>
-    //         ))
-    //     ) : (
-    //         <p className="col-span-full">No {type} Images available.</p>
-    //     );
-    // };
-    const handleFeedbackClick = () => {
-        if (bookingDetails) {
-            const { selectedDriver } = bookingDetails;
-            navigate('/bookings/newbooking/viewmore/feedback', {
-                state: { bookingId: id, selectedDriver: selectedDriver }, // Passing selectedDriver state
-            });
-        }
-    };
+  
 
     return (
         <div className="container mx-auto my-8 p-4 bg-white shadow rounded-lg">
@@ -592,56 +558,80 @@ const ViewMore: React.FC = () => {
             </div>
 
             {showPickupDetails && (
-                <div>
-                    <h2 className="text-xl font-bold mt-5">Vehicle Images (Pickup)</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {bookingDetails?.vehicleImageURLs.map((url, index) => (
-        <div key={index}>
-            <img src={url} alt={`Vehicle Image ${index + 1}`} />
-            <input
-                type="file"
-                accept="image/*"
-                onChange={(event) => handleReplaceImage(event, index, 'vehicleImageURLs')}
-            />
+        <div>
+          <h2 className="text-xl font-bold mt-5">Vehicle Images (Pickup)</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {bookingDetails?.vehicleImageURLs.map((url, index) => (
+              <div key={index}>
+                <img
+                  src={url}
+                  alt={`Vehicle Image ${index + 1}`}
+                  className="cursor-pointer" // Make the image clickable
+                  onClick={() => handleImageClick(url)} // Open the image in the modal
+                />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => handleReplaceImage(event, index, 'vehicleImageURLs')}
+                />
+              </div>
+            ))}
+          </div>
         </div>
-    ))}
-                    </div>
-                </div>
-            )}
+      )}
 
-            {showDropoffDetails && (
-                <div>
-                    <h2 className="text-xl font-bold mt-5">Vehicle Images (Dropoff)</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {bookingDetails?.vehicleImgURLs.map((url, index) => (
-        <div key={index}>
-            <img src={url} alt={`Vehicle Img ${index + 1}`} />
-            <input
-                type="file"
-                accept="image/*"
-                onChange={(event) => handleReplaceImage(event, index, 'vehicleImgURLs')}
-            />
+      {showDropoffDetails && (
+        <div>
+          <h2 className="text-xl font-bold mt-5">Vehicle Images (Dropoff)</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {bookingDetails?.vehicleImgURLs.map((url, index) => (
+              <div key={index}>
+                <img
+                  src={url}
+                  alt={`Vehicle Img ${index + 1}`}
+                  className="cursor-pointer" // Make the image clickable
+                  onClick={() => handleImageClick(url)} // Open the image in the modal
+                />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => handleReplaceImage(event, index, 'vehicleImgURLs')}
+                />
+              </div>
+            ))}
+          </div>
         </div>
-    ))}
-                    </div>
-                </div>
-            )}
+      )}
 
-            {/* Modal for viewing the selected image */}
-            {selectedImage && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="relative">
-                        <img
-                            src={selectedImage}
-                            alt="Selected"
-                            className="max-w-full max-h-[80vh] object-contain" // Limit height to 80% of the viewport height
-                        />
-                        <button onClick={closeModal} className="absolute top-2 right-2 bg-white text-black rounded-full p-1">
-                            X
-                        </button>
-                    </div>
-                </div>
-            )}
+      {/* Modal for viewing the selected image */}
+      {selectedImage && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="relative">
+            <img
+              src={selectedImage}
+              alt="Selected"
+              className="max-w-full max-h-[80vh] object-contain" // Limit height to 80% of the viewport height
+            />
+            <div className="absolute top-2 right-2 flex space-x-2">
+              {/* Close Button */}
+              <button
+                onClick={closeModal}
+                className="bg-white text-black rounded-full p-1"
+              >
+                X
+              </button>
+              {/* Download Button */}
+              <a
+                href={selectedImage}
+                download
+                className="bg-white text-black rounded-full p-1"
+              >
+                Download
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
             <table className="w-full border-collapse mt-5">
                 <tbody>
@@ -681,7 +671,7 @@ const ViewMore: React.FC = () => {
                             {bookingDetails.newStatus}, {bookingDetails.editedTime}
                         </td>
                     </tr>
-                  {/* ----------------------------------------------------------------- */}
+                    {/* ----------------------------------------------------------------- */}
                     <tr>
                         <td className="bg-gray-100 p-2 font-bold">Payable Amount by Customer/Company:</td>
                         <td className="p-2">
@@ -760,7 +750,7 @@ const ViewMore: React.FC = () => {
                             </div>
                         </td>{' '}
                     </tr>
-                    <tr>
+                    {/* <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Service Center :</td>
                         <td className="p-2">
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -778,7 +768,7 @@ const ViewMore: React.FC = () => {
                                 />
                             </div>
                         </td>{' '}
-                    </tr>
+                    </tr> */}
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">File Number :</td>
                         <td className="p-2">
@@ -1053,15 +1043,7 @@ const ViewMore: React.FC = () => {
                 {bookingDetails?.bookingChecked === true && bookingDetails.status === 'Order Completed' && (
                     <p className="text-green-600 font-medium text-center mt-2">Booking verified successfully!</p>
                 )}
-                {bookingDetails?.bookingChecked === true && bookingDetails.status === 'Order Completed' && bookingDetails?.feedback !== true && (
-                    <button className="bg-green-500 text-white px-4 py-2 rounded mt-4" onClick={handleFeedbackClick}>
-                        Feedback Form
-                    </button>
-                )}
-
-                {bookingDetails?.bookingChecked === true && bookingDetails.status === 'Order Completed' && bookingDetails?.feedback === true && (
-                    <p className="text-red-600 font-medium text-center mt-2">Feedback Closed</p>
-                )}
+               
             </div>
 
             {showForm && bookingDetails && (

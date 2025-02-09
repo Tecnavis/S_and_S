@@ -121,11 +121,11 @@ const LoginCover = () => {
                 <img src="/assets/images/auth/coming-soon-object3.png" alt="object3" className="absolute right-0 top-0 h-[300px]" />
                 <img src="/assets/images/auth/polygon-object.svg" alt="polygon" className="absolute bottom-0 end-[28%]" />
                 <div className="relative flex w-full max-w-[1502px] flex-col justify-between overflow-hidden rounded-md bg-white/60 backdrop-blur-lg dark:bg-black/50 lg:min-h-[758px] lg:flex-row lg:gap-10 xl:gap-0">
-                    <div className="relative hidden w-full items-center justify-center p-5 lg:inline-flex lg:max-w-[835px] xl:-ms-28 ltr:xl:skew-x-[14deg] rtl:xl:skew-x-[-14deg]" style={{ background: 'linear-gradient(225deg, rgba(255, 255, 255, 1) 0%, rgba(255, 0, 0, 1) 100%)' }}>
+                    <div className="relative hidden w-full items-center justify-center p-5 lg:inline-flex lg:max-w-[835px] xl:-ms-28 ltr:xl:skew-x-[14deg] rtl:xl:skew-x-[-14deg]" style={{ background: 'linear-gradient(225deg, rgb(206, 184, 149) 0%, rgb(235, 189, 103) 100%)' }}>
                         <div className="absolute inset-y-0 w-8 from-primary/10 via-transparent to-transparent ltr:-right-10 ltr:bg-gradient-to-r rtl:-left-10 rtl:bg-gradient-to-l xl:w-16 ltr:xl:-right-20 rtl:xl:-left-20"></div>
                         <div className="ltr:xl:-skew-x-[14deg] rtl:xl:skew-x-[14deg]">
                             <Link to="/" className="w-48 block lg:w-72 ms-10">
-                                <img src='/assets/images/auth/rsa-png.png' alt='logo' className="w-full"/>
+                                <img src='/assets/images/auth/s&S.png.png' alt='logo' className="w-full"/>
                             </Link>
                             <div className="mt-24 hidden w-full max-w-[430px] lg:block">
                                 <img src="/assets/images/auth/login.svg" alt="login" className="w-full" />
@@ -137,7 +137,7 @@ const LoginCover = () => {
                         </div>
                         <div className="w-full max-w-[440px] lg:mt-16">
                             <div className="mb-10">
-                                <h1 className="text-3xl font-extrabold uppercase !leading-snug text-danger md:text-4xl">Sign in</h1>
+                                <h1 className="text-3xl font-extrabold uppercase !leading-snug  md:text-4xl" style={{color:'orange'}}>Sign in</h1>
                                 <p className="text-base font-bold leading-normal text-white-dark">Enter your email/username and password to login</p>
                             </div>
                             <form className="space-y-5 dark:text-white" onSubmit={handleSubmit}>

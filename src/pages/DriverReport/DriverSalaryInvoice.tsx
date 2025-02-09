@@ -161,7 +161,7 @@ const totalBalance = bookings.reduce((total, booking) => total + Number(booking.
                     <div className="text-2xl font-semibold uppercase">Invoice</div>
                     <div className="shrink-0">
                         <img
-                            src="/assets/images/auth/rsa-png.png"
+                            src="/assets/images/auth/s&S.png.png"
                             alt="img"
                             className="w-24 ltr:ml-auto rtl:mr-auto"
                         />

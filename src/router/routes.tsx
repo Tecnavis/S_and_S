@@ -58,8 +58,6 @@ import StaffInvice from '../pages/DriverReport/StaffInvice';
 import Leave from '../pages/Leave/Leave';
 import Track from '../pages/Booking/Track';
 import Vehicle from '../pages/Vehicles/Vehicle';
-import Feedback from '../pages/Booking/Feedback';
-import FeedbackTable from '../pages/FeedBack/FeedbackTable';
 import Advance from '../pages/Report/Advance/Advance';
 import CashCollectionCompany from '../pages/CashCollectionReport.tsx/CashCollectionCompany';
 import SelectiveReportInvoiceDriver from '../pages/DriverReport/SelectiveReportInvoiceDriver';
@@ -208,8 +206,6 @@ const routes = [
     {path: "/rewarddetails",element:<RewardDetails/>},
     {path :"/leave",element:<Leave/>},
     {path :"/vehicle",element:<Vehicle/>},
-    {path :"/bookings/newbooking/viewmore/feedback",element:<Feedback/>},
-    {path :"/feedbacktable",element:<FeedbackTable/>},
 
     {
         path: '/bookings/newbooking/track/:bookingId',

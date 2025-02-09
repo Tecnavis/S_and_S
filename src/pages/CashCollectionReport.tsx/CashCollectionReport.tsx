@@ -19,7 +19,6 @@ interface Booking {
     id: string;
     amount: number; // Change to number
     receivedAmount?: number;
-
     vehicleNumber: string;
     dateTime: string;
     fileNumber?: string;
@@ -273,21 +272,45 @@ const amountToUse = parseFloat(booking.amount.toString() );
     
 
     const handleApproveClick = async (booking: Booking) => {
-        const balance = calculateBalance(booking.amount.toString(), booking.receivedAmount || 0);
-
-        if (balance !== '0.00') {
-            alert('Approval not allowed. The balance must be zero before approving.');
-        } else {
+        // Check if the staffReceived is 'Staff'
+        if (booking.receivedUser === 'Staff') {
             try {
                 const bookingRef = doc(db, `user/${uid}/bookings`, booking.id); // Use the booking ID to reference the correct booking
                 await updateDoc(bookingRef, { approve: true }); // Directly approve the booking
-                setBookings((prevBookings) => prevBookings.map((bookingItem) => (bookingItem.id === booking.id ? { ...bookingItem, approve: true, disabled: true } : bookingItem)));
+                setBookings((prevBookings) =>
+                    prevBookings.map((bookingItem) =>
+                        bookingItem.id === booking.id
+                            ? { ...bookingItem, approve: true, disabled: true }
+                            : bookingItem
+                    )
+                );
             } catch (error) {
                 console.error('Error approving booking:', error);
             }
+        } else {
+            const balance = calculateBalance(booking.amount.toString(), booking.receivedAmount || 0);
+    
+            // Only check the balance if staffReceived is not 'Staff'
+            if (balance !== '0.00') {
+                alert('Approval not allowed. The balance must be zero before approving.');
+            } else {
+                try {
+                    const bookingRef = doc(db, `user/${uid}/bookings`, booking.id); // Use the booking ID to reference the correct booking
+                    await updateDoc(bookingRef, { approve: true }); // Directly approve the booking
+                    setBookings((prevBookings) =>
+                        prevBookings.map((bookingItem) =>
+                            bookingItem.id === booking.id
+                                ? { ...bookingItem, approve: true, disabled: true }
+                                : bookingItem
+                        )
+                    );
+                } catch (error) {
+                    console.error('Error approving booking:', error);
+                }
+            }
         }
     };
-
+    //------------------------------------------------------------------------------------------------ 
     const filterBookingsByMonthAndYear = () => {
         let filtered: Booking[] = bookings;
 
@@ -451,58 +474,47 @@ const amountToUse = parseFloat(booking.amount.toString() );
             modal.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     };
-    // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // ------------------------------------------------------------------------------------------------------------------------------------------------
     const distributeReceivedAmount = (receivedAmount: number, bookings: Booking[]) => {
         let remainingAmount = receivedAmount;
-        const selectedBookingIds: string[] = []; // Array to hold selected booking IDs
-        const sortedBookings = [...bookings].sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
+        const selectedBookingIds: string[] = [];
+    
+        const sortedBookings = bookings
+            .filter((booking) => booking.receivedUser !== "Staff" && (booking.amount - (booking.receivedAmount || 0)) > 0)
+            .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
     
         const updatedBookings = sortedBookings.map((booking) => {
-            // Skip booking if receivedUser is 'Staff'
-            if (booking.receivedUser === "Staff") {
-                return booking; // No changes to the booking if it's "Staff"
-            }
-    
-            // Calculate amount to use
-            const amountToUse = parseFloat(booking.amount?.toString() || '0');
-            const bookingBalance = amountToUse - (booking.receivedAmount || 0);
+            const bookingBalance = booking.amount - (booking.receivedAmount || 0);
     
             if (remainingAmount > 0 && bookingBalance > 0) {
-                // Calculate applied amount
                 const appliedAmount = Math.min(remainingAmount, bookingBalance);
                 booking.receivedAmount = (booking.receivedAmount || 0) + appliedAmount;
                 remainingAmount -= appliedAmount;
-    
-                // Add the booking ID to the selectedBookingIds array
                 selectedBookingIds.push(booking.id);
             }
-    
-            // Store the amountToUse for further use
-            booking.amountToUse = amountToUse;
             return booking;
+            
         });
-    
-        return { updatedBookings, selectedBookingIds }; // Return both updated bookings and selected booking IDs
+
+        return { updatedBookings, selectedBookingIds };
     };
+    
     
     const handleAmountReceiveChange = async (receivedAmount: number) => {
         try {
             const { updatedBookings, selectedBookingIds } = distributeReceivedAmount(receivedAmount, bookings);
+    
             setBookings(updatedBookings);
     
-            const totalAppliedAmount = updatedBookings.reduce((acc, booking) => acc + (booking.receivedAmount || 0), 0);
-            setReceivedAmount(totalAppliedAmount.toString());
-    
             const batch = writeBatch(db);
+    
             updatedBookings.forEach((booking) => {
                 const bookingRef = doc(db, `user/${uid}/bookings`, booking.id);
-                const balance = calculateBalance(
-                    booking.amountToUse || 0,
-                    booking.receivedAmount || 0,
-                    booking.receivedUser // Ensure receivedUser is passed
-                );
+                const currentReceivedAmount = booking.receivedAmount ?? 0;
+                const balance = booking.amount - currentReceivedAmount;
+        
                 batch.update(bookingRef, {
-                    receivedAmount: booking.receivedAmount || 0,
+                    receivedAmount: booking.receivedAmount,
                     balance: balance,
                     role: role || 'unknown',
                 });
@@ -512,18 +524,15 @@ const amountToUse = parseFloat(booking.amount.toString() );
             const querySnapshot = await getDocs(usersQuery);
     
             querySnapshot.forEach((userDoc) => {
-                // Update staff received with multiple selectedBookingIds
                 updateStaffReceived(userDoc.id, uid, receivedAmount, selectedBookingIds);
             });
     
             await batch.commit();
             updateTotalBalance();
             setShowAmountDiv(false);
-            if (role === 'admin') {
-                await handleAmountReceivedChangeWithoutAuth(selectedBookingIds[0], receivedAmount.toString());
-            }
+            window.location.reload();
         } catch (error) {
-            console.error('Error during handleAmountReceiveChange:', error);
+            console.error("Error during handleAmountReceiveChange:", error);
         }
     };
     
@@ -552,9 +561,11 @@ const amountToUse = parseFloat(booking.amount.toString() );
     const handleInputChange = (bookingId: string, value: string) => {
         setInputValues((prev) => ({
             ...prev,
-            [bookingId]: value,
+            [bookingId]: value === '' ? '0' : value,  // Set to '0' if empty
         }));
     };
+
+    
     const getStaffId = async (userName: string, password: string, uid: string) => {
         const db = getFirestore();
         const usersRef = collection(db, `user/${uid}/users`);
@@ -618,6 +629,7 @@ const amountToUse = parseFloat(booking.amount.toString() );
             
             // Fetch staffId based on username and password
             const staffId = await getStaffId(userName, password, uid);
+            console.log("staffId",staffId)
             if (!staffId) {
                 console.error("Staff not found.");
                 return;
@@ -790,7 +802,7 @@ const amountToUse = parseFloat(booking.amount.toString() );
           }, [searchTerm, bookings]);
     
     return (
-        <div className="container mx-auto my-10 p-5 bg-gray-50 shadow-lg rounded-lg">
+        <div className="container mx-auto  p-5 bg-gray-50 shadow-lg rounded-lg">
             <h1 className="text-4xl font-extrabold mb-6 text-center text-gray-900 shadow-md p-3 rounded-lg bg-gradient-to-r from-indigo-300 to-red-300">Cash Collection Report</h1>
 
             {driver ? (
@@ -826,92 +838,113 @@ const amountToUse = parseFloat(booking.amount.toString() );
                         </div>
                     </div>
 
-                    <div className="container-fluid mb-5">
-                        <div className="flex flex-wrap justify-between items-center text-center md:text-left">
-                            <div className="w-full md:w-auto flex flex-col md:flex-row items-center md:justify-end">
-                                <div className="flex items-center mb-4 md:mb-0 space-x-2">
-                                    <label htmlFor="month" className="text-gray-700 font-semibold text-lg">
-                                        Filter by Month:
-                                    </label>
-                                    <select
-                                        id="month"
-                                        value={selectedMonth}
-                                        onChange={(e) => setSelectedMonth(e.target.value)}
-                                        className="border border-gray-300 rounded-lg px-4 py-2 text-gray-700 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200 ease-in-out"
-                                    >
-                                        <option value="">All Months</option>
-                                        {Array.from({ length: 12 }, (_, index) => {
-                                            const month = index + 1;
-                                            return (
-                                                <option key={month} value={month.toString()}>
-                                                    {new Date(0, month - 1).toLocaleString('default', { month: 'long' })}
-                                                </option>
-                                            );
-                                        })}
-                                    </select>
-                                </div>
+                    <div className="container-fluid mb-8">
+    <div className="flex flex-wrap justify-between items-center text-center md:text-left">
+        <div className="w-full md:w-auto flex flex-col md:flex-row items-center md:justify-end space-y-4 md:space-y-0 md:space-x-8">
+            
+            {/* Month Filter */}
+            <div className="flex items-center space-x-3">
+                <label htmlFor="month" className="text-gray-800 font-medium text-lg">
+                    Filter by Month:
+                </label>
+                <select
+                    id="month"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="border border-gray-300 rounded-xl px-5 py-2 text-gray-800 bg-white shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200"
+                >
+                    <option value="">All Months</option>
+                    {Array.from({ length: 12 }, (_, index) => {
+                        const month = index + 1;
+                        return (
+                            <option key={month} value={month.toString()}>
+                                {new Date(0, month - 1).toLocaleString('default', { month: 'long' })}
+                            </option>
+                        );
+                    })}
+                </select>
+            </div>
 
-                                <div className="flex items-center space-x-2">
-                                    <label htmlFor="year" className="text-gray-700 font-semibold text-lg">
-                                        Filter by Year:
-                                    </label>
-                                    <select
-                                        id="year"
-                                        value={selectedYear}
-                                        onChange={(e) => setSelectedYear(e.target.value)}
-                                        className="border border-gray-300 rounded-lg px-4 py-2 text-gray-700 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200 ease-in-out"
-                                    >
-                                        <option value="">All Years</option>
-                                        {Array.from({ length: 5 }, (_, index) => {
-                                            const year = new Date().getFullYear() - index;
-                                            return (
-                                                <option key={year} value={year.toString()}>
-                                                    {year}
-                                                </option>
-                                            );
-                                        })}
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            {/* Year Filter */}
+            <div className="flex items-center space-x-3">
+                <label htmlFor="year" className="text-gray-800 font-medium text-lg">
+                    Filter by Year:
+                </label>
+                <select
+                    id="year"
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(e.target.value)}
+                    className="border border-gray-300 rounded-xl px-5 py-2 text-gray-800 bg-white shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200"
+                >
+                    <option value="">All Years</option>
+                    {Array.from({ length: 11 }, (_, i) => {
+                        const year = new Date().getFullYear() - 5 + i;
+                        return (
+                            <option key={year} value={year.toString()}>
+                                {year}
+                            </option>
+                        );
+                    })}
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                      
-                        {/* <div className="bg-gradient-to-r from-green-100 to-green-200 p-6 shadow-lg rounded-lg hover:shadow-xl transform hover:scale-105 transition-transform">
-                            <div className="flex items-center space-x-4">
-                                <div className="text-4xl text-green-600">
-                                    <i className="fas fa-receipt"></i>
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-bold text-gray-800">Total Amount Of Booking</h3>
-                                    <p className="text-gray-700 text-lg">{monthlyTotals.totalAmount}</p>
-                                </div>
-                            </div>
-                        </div> */}
-                        <div className="bg-gradient-to-r from-blue-100 to-green-200 p-6 shadow-lg rounded-lg hover:shadow-xl transform hover:scale-105 transition-transform">
-                            <div className="flex items-center space-x-4">
-                                <div className="text-4xl text-blue-600">
-                                    <i className="fas fa-receipt"></i>
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-bold text-gray-800">Total Received Amount</h3>
-                                    <p className="text-gray-700 text-lg">{monthlyTotals.totalReceived}</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="bg-gradient-to-r from-red-100 to-red-200 p-6 shadow-lg rounded-lg hover:shadow-xl transform hover:scale-105 transition-transform">
-                            <div className="flex items-center space-x-4">
-                                <div className="text-4xl text-red-600">
-                                    <i className="fas fa-hand-holding-usd"></i>
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-bold text-gray-800">Monthly Collected Amount</h3>
-                                    <p className="text-gray-700 text-lg">{monthlyTotals.totalBalances}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
+    {/* Total Collected Amount Card */}
+    <div className="bg-gradient-to-br from-blue-200 to-green-300 p-8 shadow-xl rounded-2xl hover:shadow-2xl transform hover:scale-[1.07] transition-all duration-300 ease-in-out">
+        <div className="flex items-center space-x-6">
+            <div className="text-5xl text-blue-600">
+                <i className="fas fa-receipt"></i>
+            </div>
+            <div>
+                <h3 className="text-2xl font-extrabold text-gray-800 leading-tight">
+                    Total Collected Amount in {selectedMonth
+                        ? new Date(0, Number(selectedMonth) - 1).toLocaleString('default', { month: 'long' })
+                        : 'All Months'}
+                </h3>
+                <p className="text-xl text-gray-700 mt-2">{monthlyTotals.totalReceived}</p>
+            </div>
+        </div>
+    </div>
+
+    {/* Balance Amount To Collect Card */}
+    <div className="bg-gradient-to-br from-red-200 to-red-400 p-8 shadow-xl rounded-2xl hover:shadow-2xl transform hover:scale-[1.07] transition-all duration-300 ease-in-out">
+        <div className="flex items-center space-x-6">
+            <div className="text-5xl text-red-600">
+                <i className="fas fa-hand-holding-usd"></i>
+            </div>
+            <div>
+                <h3 className="text-2xl font-extrabold text-gray-800 leading-tight">
+                    Balance Amount To Collect in {selectedMonth
+                        ? new Date(0, Number(selectedMonth) - 1).toLocaleString('default', { month: 'long' })
+                        : 'All Months'}
+                </h3>
+                <p className="text-xl text-gray-700 mt-2">{monthlyTotals.totalBalances}</p>
+            </div>
+        </div>
+    </div>
+
+    {/* Overall Amount Card - Conditional */}
+    {selectedMonth && (
+        <div className="bg-gradient-to-br from-violet-200 to-blue-300 p-8 shadow-xl rounded-2xl hover:shadow-2xl transform hover:scale-[1.07] transition-all duration-300 ease-in-out">
+            <div className="flex items-center space-x-6">
+                <div className="text-5xl text-green-600">
+                    <i className="fas fa-receipt"></i>
+                </div>
+                <div>
+                    <h3 className="text-2xl font-extrabold text-gray-800 leading-tight">
+                        Overall Amount in {new Date(0, Number(selectedMonth) - 1).toLocaleString('default', { month: 'long' })}
+                    </h3>
+                    <p className="text-xl text-gray-700 mt-2">{monthlyTotals.totalAmount}</p>
+                </div>
+            </div>
+        </div>
+    )}
+</div>
+
                     <input
                 type="text"
                 placeholder="Search..."
@@ -1012,11 +1045,16 @@ const amountToUse = parseFloat(booking.amount.toString() );
                                             <td className={styles.responsiveCell}>{booking.vehicleNumber}</td>
                                            
                                             <td className={styles.responsiveCell}>{booking.amount}</td>
-                                          <td key={booking.id} className={styles.responsiveCell}>
+                                            <td key={booking.id} className={styles.responsiveCell}>
                                                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                                                {booking.companyBooking && driver?.companyName !== 'Company' || booking.receivedUser === "Staff" ? (
-                                                        <span style={{ color: 'red', fontWeight: 'bold' }}>Not Need</span>
-                                                    ) : (
+                                                {booking.receivedUser === "Staff" ? (
+                                                    <span style={{ color: 'green', fontWeight: 'bold', textShadow: '2px 2px 4px rgba(127, 198, 12, 0.9)' }}>
+    Staff Received
+</span>
+        ) : (
+            booking.companyBooking && driver?.companyName !== 'Company' ? (
+                <span style={{ color: 'red', fontWeight: 'bold', textShadow: '2px 2px 4px rgba(215, 138, 36, 0.9)' }}>Not Need</span>
+            ) : (
                                                         <>
                                                              <input
                                                             type="text"
@@ -1059,10 +1097,12 @@ const amountToUse = parseFloat(booking.amount.toString() );
     {loadingStates[booking.id] ? 'Loading...' : 'OK'}
     </button>
                                                 </>
+                                                      )
                                                     )}
                                                     
                                                 </div>
                                             </td>
+
 
                                             <td
     className={styles.responsiveCell}
@@ -1088,7 +1128,7 @@ const amountToUse = parseFloat(booking.amount.toString() );
 
 
                                          
-                                          
+                                          {booking.companyBooking == false && (
                                             <td>
                                                 <button
                                                     onClick={() => handleApproveClick(booking)}
@@ -1100,6 +1140,13 @@ const amountToUse = parseFloat(booking.amount.toString() );
                                                     {booking.approve ? 'Approved' : 'Approve'}
                                                 </button>
                                             </td>
+                                            )}
+                                          {booking.companyBooking === true && (
+    <td className={styles.companyBookingCell}>
+        Company Booking
+    </td>
+)}
+
                                              <td>
                                                                                     <Link
                                                                                         to={`/bookings/newbooking/viewmore/${booking.id}`}

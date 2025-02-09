@@ -69,7 +69,7 @@ const Sidebar = () => {
                 <div className="bg-white dark:bg-black h-full">
                     <div className="flex justify-between items-center px-4">
                         <NavLink to="/index" className="main-logo flex items-center shrink-0">
-                            <img className="w-48 mx-auto p-3" src="/assets/images/auth/rsa-png.png" alt="logo" />
+                            <img className="w-48 mx-auto p-3" src="/assets/images/auth/s&S.png.png" alt="logo" />
                         </NavLink>
                         <button
                             type="button"
@@ -123,18 +123,18 @@ const Sidebar = () => {
                                                 <NavLink to="/users/staff">Staff Creation</NavLink>
                                             </li>
                                         )}
-                                        <li>
+                                        {/* <li>
                                             <NavLink to="/users/company">Provider Creation</NavLink>
-                                        </li>
+                                        </li> */}
                                         <li>
                                             <NavLink to="/users/customer">Customer Creation</NavLink>
                                         </li>
                                         <li>
                                             <NavLink to="/users/driver">Driver Creation</NavLink>
                                         </li>
-                                        <li>
+                                        {/* <li>
                                             <NavLink to="/users/companycreation">Company Creation</NavLink>
-                                        </li>
+                                        </li> */}
                                     </ul>
                                 </AnimateHeight>
                             </li>
@@ -278,11 +278,11 @@ const Sidebar = () => {
                                 <AnimateHeight duration={300} height={currentMenu === 'driverreport' ? 'auto' : 0}>
                                     <ul className="sub-menu text-gray-500">
                                         <li>
-                                            <NavLink to="/driverreport">Driver/Company/Provider Reports</NavLink>
+                                            <NavLink to="/driverreport">DriverProvider Reports</NavLink>
                                         </li>
-                                        <li>
+                                        {/* <li>
                                             <NavLink to="/showroomreport">ShowRoom Reports</NavLink>
-                                        </li>
+                                        </li> */}
                                         <li>
                                             <NavLink to="/rsastaffreport">RSA Staff Reports</NavLink>
                                         </li>
@@ -290,33 +290,7 @@ const Sidebar = () => {
                                 </AnimateHeight>
                             </li>
 
-                            <li className="menu nav-item ">
-                                <button
-                                    type="button"
-                                    className={`${currentMenu} nav-link group w-full py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`}
-                                    onClick={() => toggleMenu('feedbacktable')}
-                                >
-                                    <div className="flex items-center">
-                                        <IconMenuDocumentation className="group-hover:!text-primary shrink-0" />
-                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">
-                                            {' '}
-                                            &nbsp; Feed Back &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{' '}
-                                        </span>
-                                    </div>
-
-                                    <div className={currentMenu !== 'feedbacktable' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                        <IconCaretDown />
-                                    </div>
-                                </button>
-
-                                <AnimateHeight duration={300} height={currentMenu === 'feedbacktable' ? 'auto' : 0}>
-                                    <ul className="sub-menu text-gray-500">
-                                        <li>
-                                            <NavLink to="/feedbacktable">Feed Back</NavLink>
-                                        </li>
-                                    </ul>
-                                </AnimateHeight>
-                            </li>
+                         
                          
                             {/* <li className="menu nav-item ">
                                 <button type="button" className={`${currentMenu === 'status' ? 'active' : ''} nav-link group w-full py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`} onClick={() => toggleMenu('status')}>
